@@ -1,3 +1,6 @@
+#ifndef BUS_H
+#define BUS_H
+
 #include <systemc.h>
 
 class Bus_if : public virtual sc_interface
@@ -22,3 +25,5 @@ class Bus : public Bus_if, public sc_module
         virtual bool read(int addr);
         virtual bool write(int addr, int data);
 };
+
+#endif

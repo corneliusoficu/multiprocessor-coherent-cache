@@ -1,46 +1,29 @@
+#ifndef CACHE_H
+#define CACHE_H
+
 #include <systemc.h>
 
 #include "psa.h"
+#include "cache_if.h"
+#include "helpers.h"
 
 #define CACHE_LINE_SIZE_BYTES        32
 #define CACHE_NUMBER_OF_LINES_IN_SET 8
 #define CACHE_NUMBER_OF_SETS         128
 
-SC_MODULE(Cache)
+class Cache : public cache_if, public sc_module
 {
 
 public:
-    enum Function
-    {
-        FUNC_READ,
-        FUNC_WRITE
-    };
+    int cpu_read(uint32_t addr);
+    int cpu_write(uint32_t addr, uint32_t data);
 
-    enum RetCode
-    {
-        RET_READ_DONE,
-        RET_WRITE_DONE,
-    };
-
-    sc_in<bool>     Port_CLK;
-    sc_in<Function> Port_Func;
-    sc_in<int>      Port_Addr;
-    sc_out<RetCode> Port_Done;
-    sc_inout_rv<32> Port_Data;
-
-    SC_CTOR(Cache)
-    {
-        SC_THREAD(execute);
-        sensitive << Port_CLK.pos();
-        dont_initialize();
-        initialize_cache_arrays();
-        cout << bit_mask_byte_in_line << ' ' << bit_mask_set_address << ' ' << bit_mask_tag << '\n';
-    }
-
+    Cache(sc_module_name, int);
     ~Cache();
 
 private:
-    
+    int id;
+
     int **cache;
     int **tags;
     int **least_recently_updated;
@@ -49,6 +32,7 @@ private:
     int bit_mask_set_address  = create_mask(5, 11);
     int bit_mask_tag          = create_mask(12, 31);
 
+    void extract_address_components(u_int32_t, int*, int*, int*);
     void initialize_cache_arrays();
     int  create_mask(int, int);
     int  get_index_of_line_in_set(int, int);
@@ -58,3 +42,5 @@ private:
     void handle_cache_write(int, int, int, int, int);
     void execute();
 };
+
+#endif

@@ -1,9 +1,16 @@
 #include "cpu.h"
 
+CPU::CPU(sc_module_name name_, int id_) : sc_module(name_), id(id_)
+{
+    SC_THREAD(execute);
+    sensitive << clock.pos();
+    log(name(), "constructed with id", id);       
+    dont_initialize();
+}
+
 void CPU::execute()
     {
         TraceFile::Entry tr_data;
-        Cache::Function  f;
 
         // Loop until end of tracefile
         while(!tracefile_ptr->eof())
@@ -18,52 +25,31 @@ void CPU::execute()
             switch(tr_data.type)
             {
                 case TraceFile::ENTRY_TYPE_READ:
-                    f = Cache::FUNC_READ;
+                {
+                    log(name(), "reading from address", tr_data.addr);
+                    cache->cpu_read(tr_data.addr);
+                    log(name(), "read done");
                     break;
-
+                }
                 case TraceFile::ENTRY_TYPE_WRITE:
-                    f = Cache::FUNC_WRITE;
+                {
+                    log(name(), "writing to address", tr_data.addr);
+                    uint32_t data = rand();
+                    cache->cpu_write(tr_data.addr, data);
+                    log(name(), "write done");
                     break;
-
+                }
                 case TraceFile::ENTRY_TYPE_NOP:
+                {
+                    log(name(), "nop");
                     break;
-
+                }
                 default:
+                {
                     cerr << "Error, got invalid data from Trace" << endl;
                     exit(0);
-            }
-
-            if(tr_data.type != TraceFile::ENTRY_TYPE_NOP)
-            {
-                Port_CacheAddr.write(tr_data.addr);
-                Port_CacheFunc.write(f);
-
-                if (f == Cache::FUNC_WRITE)
-                {
-                    cout << sc_time_stamp() << ": CPU sends write" << endl;
-
-                    uint32_t data = rand();
-                    Port_CacheData.write(data);
-                    wait();
-                    Port_CacheData.write("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
-                }
-                else
-                {
-                    cout << sc_time_stamp() << ": CPU sends read" << endl;
-                }
-
-                wait(Port_CacheDone.value_changed_event());
-
-                if (f == Cache::FUNC_READ)
-                {
-                    cout << sc_time_stamp() << ": CPU reads: " << Port_CacheData.read() << endl;
                 }
             }
-            else
-            {
-                cout << sc_time_stamp() << ": CPU executes NOP" << endl;
-            }
-            // Advance one cycle in simulated time
             wait();
         }
 

@@ -1,24 +1,28 @@
+#ifndef CPU_H
+#define CPU_H
+
 #include <systemc.h>
+#include <iostream>
 
-#include "cache.h"
+#include "cache_if.h"
+#include "helpers.h"
+#include "psa.h"
 
-SC_MODULE(CPU)
+class CPU : public sc_module
 {
 
 public:
-    sc_in<bool>             Port_CLK;
-    sc_in<Cache::RetCode>   Port_CacheDone;
-    sc_out<Cache::Function> Port_CacheFunc;
-    sc_out<int>             Port_CacheAddr;
-    sc_inout_rv<32>         Port_CacheData;
+    sc_in_clk         clock;
+    sc_port<cache_if> cache;
 
-    SC_CTOR(CPU)
-    {
-        SC_THREAD(execute);
-        sensitive << Port_CLK.pos();
-        dont_initialize();
-    }
+    CPU(sc_module_name, int);
+
+    SC_HAS_PROCESS(CPU);
 
 private:
+    int id;
+
     void execute();
 };
+
+#endif

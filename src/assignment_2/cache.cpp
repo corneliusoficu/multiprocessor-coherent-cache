@@ -91,7 +91,7 @@ int Cache::cpu_read(uint32_t addr)
     if(line_in_set_index == -1)
     {
         log(name(), "read miss on address", addr);
-        stats_readmiss(0);
+        stats_readmiss(id);
         memory->read(addr);
         line_in_set_index = get_lru_line(set_address);
         tags[set_address][line_in_set_index] = tag;
@@ -101,7 +101,7 @@ int Cache::cpu_read(uint32_t addr)
     {
         log(name(), "read hit on address", addr);
         update_lru(set_address, line_in_set_index);
-        stats_readhit(0);
+        stats_readhit(id);
     }
     
     update_lru(set_address, line_in_set_index);
@@ -118,7 +118,7 @@ int Cache::cpu_write(uint32_t addr, uint32_t data)
     if(line_in_set_index == -1)
     {
         log(name(), "write miss on address", addr);
-        stats_writemiss(0);
+        stats_writemiss(id);
         line_in_set_index = get_lru_line(set_address);
         tags[set_address][line_in_set_index] = tag;
         //Simulate write in memory 
@@ -127,7 +127,7 @@ int Cache::cpu_write(uint32_t addr, uint32_t data)
     else
     {
         log(name(), "write hit on address", addr);
-        stats_writehit(0);
+        stats_writehit(id);
         update_lru(set_address, line_in_set_index);
     }
 
@@ -143,5 +143,9 @@ Cache::~Cache()
         delete[] least_recently_updated[index];
         delete[] cache[index];
         delete[] tags[index];
-    }   
+    }
+
+    delete[] least_recently_updated;
+    delete[] cache;
+    delete[] tags;   
 }

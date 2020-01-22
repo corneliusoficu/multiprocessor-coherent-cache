@@ -16,7 +16,7 @@ void CPU::execute()
         while(!tracefile_ptr->eof())
         {
             // Get the next action for the processor in the trace
-            if(!tracefile_ptr->next(0, tr_data))
+            if(!tracefile_ptr->next(id, tr_data))
             {
                 cerr << "Error reading trace for CPU" << endl;
                 break;
@@ -53,6 +53,8 @@ void CPU::execute()
             wait();
         }
 
-        // Finished the Tracefile, now stop the simulation
-        sc_stop();
+        if(id == 0)
+        {
+            sc_stop();
+        }
     }

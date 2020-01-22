@@ -5,6 +5,7 @@
 
 #include "psa.h"
 #include "cache_if.h"
+#include "memory_if.h"
 #include "helpers.h"
 
 #define CACHE_LINE_SIZE_BYTES        32
@@ -15,11 +16,13 @@ class Cache : public cache_if, public sc_module
 {
 
 public:
-    int cpu_read(uint32_t addr);
-    int cpu_write(uint32_t addr, uint32_t data);
+    sc_port<memory_if> memory;
 
     Cache(sc_module_name, int);
     ~Cache();
+
+    int cpu_read(uint32_t addr);
+    int cpu_write(uint32_t addr, uint32_t data);
 
 private:
     int id;

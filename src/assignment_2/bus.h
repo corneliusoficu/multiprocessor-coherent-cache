@@ -3,12 +3,7 @@
 
 #include <systemc.h>
 
-class Bus_if : public virtual sc_interface
-{
-    public:
-        virtual bool read(int addr) = 0;
-        virtual bool write(int addr, int data) = 0;
-};
+#include "bus_if.h"
 
 class Bus : public Bus_if, public sc_module
 {

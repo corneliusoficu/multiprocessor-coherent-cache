@@ -92,7 +92,7 @@ int Cache::cpu_read(uint32_t addr)
     {
         log(name(), "read miss on address", addr);
         stats_readmiss(0);
-        wait(100);
+        memory->read(addr);
         line_in_set_index = get_lru_line(set_address);
         tags[set_address][line_in_set_index] = tag;
         cache[set_address][line_in_set_index * CACHE_LINE_SIZE_BYTES + byte_in_line] = rand() % 1000 + 1;
@@ -122,8 +122,7 @@ int Cache::cpu_write(uint32_t addr, uint32_t data)
         line_in_set_index = get_lru_line(set_address);
         tags[set_address][line_in_set_index] = tag;
         //Simulate write in memory 
-        log(name(), "read address", addr);
-        wait(100);
+        memory->read(addr);
     }
     else
     {

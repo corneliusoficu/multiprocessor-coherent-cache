@@ -4,6 +4,7 @@
 
 #include "cpu.h"
 #include "cache.h"
+#include "memory.h"
 
 using namespace std;
 using namespace sc_core; // This pollutes namespace, better: only import what you need.
@@ -26,14 +27,17 @@ int sc_main(int argc, char* argv[])
         // Initialize statistics counters
         stats_init();
 
-        CPU   *cpu   = new CPU("cpu", 0);
-        Cache *cache = new Cache("cache", 0); 
+        CPU    *cpu    = new CPU("cpu", 0);
+        Cache  *cache  = new Cache("cache", 0); 
+        Memory *memory = new Memory("memory");
 
         // The clock that will drive the CPU
         sc_clock clk;
 
         cpu->cache(*cache);
         cpu->clock(clk);
+
+        cache->memory(*memory);
 
         // Start Simulation
         sc_start();

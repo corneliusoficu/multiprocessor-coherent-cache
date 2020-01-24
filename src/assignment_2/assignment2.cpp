@@ -30,26 +30,31 @@ void init_bus_cpus_and_caches(Bus *bus, CPU** cpus,
     Cache* cache;
     CPU*   cpu;
 
-    bus->Port_BusProc(*sig_bus_proc);
-    bus->Port_BusValid(*sig_bus_valid);
+    bus->memory(*memory);
+    bus->port_clk(*clk);
+    bus->port_bus_proc(*sig_bus_proc);
+    bus->port_bus_valid(*sig_bus_valid);
 
     for(int index = 0; index < nr_cpus; index++)
     {
-        sprintf(name_cpu,   "cpu_%d",  index);
+        sprintf(name_cpu,   "cpu_%d",   index);
         sprintf(name_cache, "cache_%d", index);
 
-        cpu   = new CPU(name_cpu, index);
+        cpu   = new CPU  (name_cpu,   index);
         cache = new Cache(name_cache, index);
 
         cpu->cache(*cache);
         cpu->clock(*clk);
-        cache->memory(*memory);
+
+        cache->bus(*bus);
+        cache->port_bus_addr(bus->port_bus_addr);
+        cache->port_bus_proc(bus->port_bus_proc);
+        cache->port_bus_valid(bus->port_bus_valid);
 
         cpus[index]   = cpu;
         caches[index] = cache;
     }
 }
-
 
 int sc_main(int argc, char* argv[])
 {
@@ -69,6 +74,7 @@ int sc_main(int argc, char* argv[])
 
         CPU*    cpus[num_cpus];
         Cache*  caches[num_cpus];
+        
         Bus*    bus    = new Bus("bus", 0, nr_processors);
         Memory* memory = new Memory("memory");
 

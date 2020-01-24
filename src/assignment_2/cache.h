@@ -5,7 +5,7 @@
 
 #include "psa.h"
 #include "cache_if.h"
-#include "memory_if.h"
+#include "bus_if.h"
 #include "helpers.h"
 
 #define CACHE_LINE_SIZE_BYTES        32
@@ -23,8 +23,11 @@ public:
         WRITE,
         INVALID
     };
-    
-    sc_port<memory_if> memory;
+
+    sc_port<Bus_if>    bus;
+    sc_in_rv<32>       port_bus_addr;
+    sc_in<int>         port_bus_proc;
+    sc_in<Req>         port_bus_valid;
 
     Cache(sc_module_name, int);
     ~Cache();

@@ -4,6 +4,7 @@
 #include <systemc.h>
 
 #include "bus_if.h"
+#include "memory_if.h"
 #include "cache.h"
 
 class Bus : public Bus_if, public sc_module
@@ -23,10 +24,12 @@ class Bus : public Bus_if, public sc_module
             int      address;
             Request  request_type;
         } bus_request;
-        
-        sc_signal_rv<32>   Port_BusAddr;
-        sc_out<Cache::Req> Port_BusValid;
-        sc_out<int>        Port_BusProc;
+
+        sc_in<bool>        port_clk;
+        sc_port<memory_if> memory;        
+        sc_signal_rv<32>   port_bus_addr;
+        sc_out<Cache::Req> port_bus_valid;
+        sc_out<int>        port_bus_proc;
 
         Bus(sc_module_name, int, int);
         ~Bus();

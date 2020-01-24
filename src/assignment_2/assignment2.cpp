@@ -5,6 +5,7 @@
 #include "cpu.h"
 #include "cache.h"
 #include "memory.h"
+#include "bus.h"
 
 using namespace std;
 using namespace sc_core; // This pollutes namespace, better: only import what you need.
@@ -18,13 +19,19 @@ void delete_cpus_and_caches(CPU **cpus, Cache** caches, int nr_cpus)
     }
 }
 
-void init_cpus_and_caches(CPU** cpus, Cache** caches, int nr_cpus, Memory* memory, sc_clock *clk)
+void init_bus_cpus_and_caches(Bus *bus, CPU** cpus, 
+                              Cache** caches, int nr_cpus, 
+                              Memory* memory, sc_clock *clk, 
+                              sc_signal<int> *sig_bus_proc,
+                              sc_signal<Cache::Req> *sig_bus_valid)
 {   
-    char name_cpu[20];
-    char name_cache[20];
+    char name_cpu[20], name_cache[20];
 
     Cache* cache;
     CPU*   cpu;
+
+    bus->Port_BusProc(*sig_bus_proc);
+    bus->Port_BusValid(*sig_bus_valid);
 
     for(int index = 0; index < nr_cpus; index++)
     {
@@ -62,11 +69,14 @@ int sc_main(int argc, char* argv[])
 
         CPU*    cpus[num_cpus];
         Cache*  caches[num_cpus];
+        Bus*    bus    = new Bus("bus", 0, nr_processors);
         Memory* memory = new Memory("memory");
 
-        sc_clock clk;
+        sc_clock              clk;
+        sc_signal<int>        sig_bus_proc;
+        sc_signal<Cache::Req> sig_bus_valid;
 
-        init_cpus_and_caches(cpus, caches, nr_processors, memory, &clk);
+        init_bus_cpus_and_caches(bus, cpus, caches, nr_processors, memory, &clk, &sig_bus_proc, &sig_bus_valid);
 
         sc_start();
 

@@ -16,6 +16,14 @@ class Cache : public cache_if, public sc_module
 {
 
 public:
+    enum Req
+    {
+        READ,
+        READX,
+        WRITE,
+        INVALID
+    };
+    
     sc_port<memory_if> memory;
 
     Cache(sc_module_name, int);

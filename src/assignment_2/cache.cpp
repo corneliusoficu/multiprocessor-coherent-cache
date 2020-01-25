@@ -1,8 +1,26 @@
 #include "cache.h"
 
+
 Cache::Cache(sc_module_name name_, int id_) : sc_module(name_), id(id_)
 {
     initialize_cache_arrays();
+    SC_THREAD(snoop);
+    sensitive << port_clk.pos();
+    dont_initialize();
+}
+
+Cache::~Cache() 
+{
+    for(int index = 0; index < CACHE_NUMBER_OF_SETS; index++)
+    {
+        delete[] least_recently_updated[index];
+        delete[] cache[index];
+        delete[] tags[index];
+    }
+
+    delete[] least_recently_updated;
+    delete[] cache;
+    delete[] tags;   
 }
 
 void Cache::initialize_cache_arrays()
@@ -83,7 +101,7 @@ void Cache::extract_address_components(u_int32_t addr, int *byte_in_line, int *s
 
 int Cache::cpu_read(uint32_t addr)
 {
-    int byte_in_line, set_address, tag;
+    int byte_in_line, set_address, tag, locked_proc_id_mutex;
     extract_address_components(addr, &byte_in_line, &set_address, &tag);
 
     int line_in_set_index = get_index_of_line_in_set(set_address, tag);
@@ -92,17 +110,27 @@ int Cache::cpu_read(uint32_t addr)
     {
         log(name(), "read miss on address", addr);
         stats_readmiss(id);
-        // memory->read(addr);
+        
+        locked_proc_id_mutex = bus->check_ongoing_requests(id, addr, BusRequest::READ);
         bus->read(id, addr);
+        
         line_in_set_index = get_lru_line(set_address);
         tags[set_address][line_in_set_index] = tag;
         cache[set_address][line_in_set_index * CACHE_LINE_SIZE_BYTES + byte_in_line] = rand() % 1000 + 1;
+        
+        bus->release_mutex(id, addr);
+        if(locked_proc_id_mutex != -1)
+        {
+            bus->release_mutex(locked_proc_id_mutex, addr);
+        }
+        wait();
     }
     else
     {
         log(name(), "read hit on address", addr);
         update_lru(set_address, line_in_set_index);
         stats_readhit(id);
+        wait();
     }
     
     update_lru(set_address, line_in_set_index);
@@ -111,7 +139,7 @@ int Cache::cpu_read(uint32_t addr)
 
 int Cache::cpu_write(uint32_t addr, uint32_t data)
 {
-    int byte_in_line, set_address, tag;
+    int byte_in_line, set_address, tag, locked_proc_id_mutex;
     extract_address_components(addr, &byte_in_line, &set_address, &tag);
 
     int line_in_set_index = get_index_of_line_in_set(set_address, tag);
@@ -120,16 +148,27 @@ int Cache::cpu_write(uint32_t addr, uint32_t data)
     {
         log(name(), "write miss on address", addr);
         stats_writemiss(id);
+
         line_in_set_index = get_lru_line(set_address);
         tags[set_address][line_in_set_index] = tag;
-        //Simulate write in memory 
-        // memory->read(addr);
+        wait();
     }
     else
     {
         log(name(), "write hit on address", addr);
         stats_writehit(id);
+
+        locked_proc_id_mutex = bus->check_ongoing_requests(id, addr, BusRequest::WRITE);
+        bus->write(id, addr, data);
+        
         update_lru(set_address, line_in_set_index);
+
+        bus->release_mutex(id, addr);
+        if(locked_proc_id_mutex != -1)
+        {
+            bus->release_mutex(locked_proc_id_mutex, addr);
+        }
+        wait();
     }
 
     cache[set_address][line_in_set_index * CACHE_NUMBER_OF_LINES_IN_SET] = data;
@@ -137,16 +176,38 @@ int Cache::cpu_write(uint32_t addr, uint32_t data)
     return 0;
 }
 
-Cache::~Cache() 
+void Cache::invalidate_cache_copy(int addr)
 {
-    for(int index = 0; index < CACHE_NUMBER_OF_SETS; index++)
-    {
-        delete[] least_recently_updated[index];
-        delete[] cache[index];
-        delete[] tags[index];
-    }
 
-    delete[] least_recently_updated;
-    delete[] cache;
-    delete[] tags;   
+}
+
+void Cache::snoop()
+{
+    while(can_snoop)
+    {
+        wait(port_bus_valid.value_changed_event());
+        
+        int snooped_address     = port_bus_addr.read().to_int();
+        BusRequest request_type = port_bus_valid.read();
+        int proc_index          = port_bus_proc.read();
+
+        handle_snooped_value(snooped_address, request_type, proc_index); 
+    }
+}
+
+void Cache::handle_snooped_value(int snooped_address, BusRequest request_type, int proc_index)
+{
+    switch(request_type)
+    {   
+        case WRITE:
+        case READX:
+            if(proc_index != id)
+            {
+                invalidate_cache_copy(snooped_address);
+            }
+            break;
+        case READ:
+        case INVALID:
+            break;
+    }
 }

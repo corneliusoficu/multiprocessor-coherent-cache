@@ -23,7 +23,7 @@ void init_bus_cpus_and_caches(Bus *bus, CPU** cpus,
                               Cache** caches, int nr_cpus, 
                               Memory* memory, sc_clock *clk, 
                               sc_signal<int> *sig_bus_proc,
-                              sc_signal<Cache::Req> *sig_bus_valid)
+                              sc_signal<BusRequest> *sig_bus_valid)
 {   
     char name_cpu[20], name_cache[20];
 
@@ -48,8 +48,10 @@ void init_bus_cpus_and_caches(Bus *bus, CPU** cpus,
 
         cache->bus(*bus);
         cache->port_bus_addr(bus->port_bus_addr);
-        cache->port_bus_proc(bus->port_bus_proc);
-        cache->port_bus_valid(bus->port_bus_valid);
+        cache->port_bus_proc(*sig_bus_proc);
+        cache->port_bus_valid(*sig_bus_valid);
+        cache->can_snoop = true;
+        cache->port_clk(*clk);
 
         cpus[index]   = cpu;
         caches[index] = cache;
@@ -61,6 +63,11 @@ int sc_main(int argc, char* argv[])
     try
     {
         init_tracefile(&argc, &argv);
+
+        sc_report_handler::set_actions(SC_ID_MORE_THAN_ONE_SIGNAL_DRIVER_, SC_DO_NOTHING);
+        sc_report_handler::set_actions(SC_ID_LOGIC_X_TO_BOOL_,             SC_LOG);
+        sc_report_handler::set_actions(SC_ID_VECTOR_CONTAINS_LOGIC_VALUE_, SC_LOG);
+
         int nr_processors = num_cpus;
 
         if (argc == 2 && !strcmp(argv[0], "-q")) 
@@ -80,7 +87,7 @@ int sc_main(int argc, char* argv[])
 
         sc_clock              clk;
         sc_signal<int>        sig_bus_proc;
-        sc_signal<Cache::Req> sig_bus_valid;
+        sc_signal<BusRequest> sig_bus_valid;
 
         init_bus_cpus_and_caches(bus, cpus, caches, nr_processors, memory, &clk, &sig_bus_proc, &sig_bus_valid);
 

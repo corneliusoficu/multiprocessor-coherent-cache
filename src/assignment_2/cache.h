@@ -16,21 +16,18 @@ class Cache : public cache_if, public sc_module
 {
 
 public:
-    enum Req
-    {
-        READ,
-        READX,
-        WRITE,
-        INVALID
-    };
+    sc_in<bool>       port_clk;
+    sc_port<Bus_if>   bus;
+    sc_in_rv<32>      port_bus_addr;
+    sc_in<int>        port_bus_proc;
+    sc_in<BusRequest> port_bus_valid;
 
-    sc_port<Bus_if>    bus;
-    sc_in_rv<32>       port_bus_addr;
-    sc_in<int>         port_bus_proc;
-    sc_in<Req>         port_bus_valid;
+    bool can_snoop;
 
     Cache(sc_module_name, int);
     ~Cache();
+
+    SC_HAS_PROCESS(Cache);
 
     int cpu_read(uint32_t addr);
     int cpu_write(uint32_t addr, uint32_t data);
@@ -55,6 +52,9 @@ private:
     void handle_cache_read(int, int, int);
     void handle_cache_write(int, int, int, int, int);
     void execute();
+    void snoop();
+    void handle_snooped_value(int, BusRequest, int);
+    void invalidate_cache_copy(int);
 };
 
 #endif

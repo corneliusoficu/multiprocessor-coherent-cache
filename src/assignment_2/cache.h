@@ -35,10 +35,10 @@ public:
 private:
     int id;
 
-    int **cache;
-    int **tags;
-    int **least_recently_updated;
-    int **cache_status;
+    int     **cache;
+    int     **tags;
+    int     **cache_status;
+    u_int8_t *lru;
 
     int bit_mask_byte_in_line = create_mask(0,  4);
     int bit_mask_set_address  = create_mask(5, 11);

@@ -14,12 +14,11 @@ Cache::~Cache()
 {
     for(int index = 0; index < CACHE_NUMBER_OF_SETS; index++)
     {
-        delete[] least_recently_updated[index];
         delete[] cache[index];
         delete[] tags[index];
     }
 
-    delete[] least_recently_updated;
+    delete[] lru;
     delete[] cache;
     delete[] tags;   
 }
@@ -28,12 +27,11 @@ void Cache::initialize_cache_arrays()
 {
     cache                   = new int*[CACHE_NUMBER_OF_SETS];
     tags                    = new int*[CACHE_NUMBER_OF_SETS]; 
-    least_recently_updated  = new int*[CACHE_NUMBER_OF_SETS];
     cache_status            = new int*[CACHE_NUMBER_OF_SETS];
+    lru                     = new u_int8_t[CACHE_NUMBER_OF_SETS];
 
     for(int i = 0; i < CACHE_NUMBER_OF_SETS; i++)
     {
-        least_recently_updated[i] = new int[CACHE_NUMBER_OF_LINES_IN_SET];
         cache[i]                  = new int[CACHE_NUMBER_OF_LINES_IN_SET * CACHE_LINE_SIZE_BYTES];
         tags[i]                   = new int[CACHE_NUMBER_OF_LINES_IN_SET];
         cache_status[i]           = new int[CACHE_NUMBER_OF_LINES_IN_SET];
@@ -70,34 +68,91 @@ int Cache::get_index_of_line_in_set(int set_index, int tag)
 
 void Cache::update_lru(int set_address, int line_in_set_index)
 {
-    for(int i = 0; i < CACHE_NUMBER_OF_LINES_IN_SET; i++)
+    switch(line_in_set_index)
     {
-        if(least_recently_updated[set_address][i] < least_recently_updated[set_address][line_in_set_index])
-        {
-            least_recently_updated[set_address][i]++;
-        }
+        case 0:
+            lru[set_address] = lru[set_address] | 11;
+            break;
+        case 1:
+            lru[set_address] = lru[set_address] | 3;
+            lru[set_address] = lru[set_address] & 119;
+            break;
+        case 2:
+            lru[set_address] = lru[set_address] | 17;
+            lru[set_address] = lru[set_address] & 125;
+            break;
+        case 3:
+            lru[set_address] = lru[set_address] | 1;
+            lru[set_address] = lru[set_address] & 109;
+            break;
+        case 4:
+            lru[set_address] = lru[set_address] | 36;
+            lru[set_address] = lru[set_address] & 126;
+            break;                   
+        case 5:
+            lru[set_address] = lru[set_address] | 4;
+            lru[set_address] = lru[set_address] & 94;
+            break;
+        case 6:
+            lru[set_address] = lru[set_address] | 64;
+            lru[set_address] = lru[set_address] & 122;
+            break;
+        case 7:
+            lru[set_address] = lru[set_address] & 58;
+            break;
+        default:
+            break;
     }
-    least_recently_updated[set_address][line_in_set_index] = 0;
 }
 
-int Cache::get_lru_line(int set_address){ //returns index of the lru line
-    int max       = 0;
-    int max_index = 0;
-
+int Cache::get_lru_line(int set_address)
+{ 
     for(int i = 0; i < CACHE_NUMBER_OF_LINES_IN_SET; i++)
     {
         if(cache_status[set_address][i] == 0)
         {
             return i;
         }
-        if(least_recently_updated[set_address][i] > max)
-        {
-            max = least_recently_updated[set_address][i];
-            max_index = i;
-        }
-
     }
-    return max_index;
+
+    u_int8_t lru_val = lru[set_address];
+
+    if( (lru_val & 11) == 0 )
+    {
+        return 0;
+    }
+    else if( (lru_val & 11) == 8 )
+    {
+        return 1;
+    }
+    else if( (lru_val & 19) == 2 )
+    {
+        return 2;
+    }
+    else if( (lru_val & 19) == 18 )
+    {
+        return 3;
+    }
+    else if( (lru_val & 37) == 1 )
+    {
+        return 4;
+    }
+    else if( (lru_val & 37) == 33 )
+    {
+        return 5;
+    }
+    else if( (lru_val & 69) == 5 )
+    {
+        return 6;
+    }
+    else if( (lru_val & 69) == 69 )
+    {
+        return 7;
+    }
+    else
+    {
+        return -1;
+    }
 }
 
 void Cache::extract_address_components(int addr, int *byte_in_line, int *set_address, int *tag)

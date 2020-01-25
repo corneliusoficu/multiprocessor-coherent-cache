@@ -149,8 +149,18 @@ int Cache::cpu_write(uint32_t addr, uint32_t data)
         log(name(), "write miss on address", addr);
         stats_writemiss(id);
 
+        locked_proc_id_mutex = bus->check_ongoing_requests(id, addr, BusRequest::READX);
+        bus->readx(id, addr, data);
+
         line_in_set_index = get_lru_line(set_address);
         tags[set_address][line_in_set_index] = tag;
+
+        bus->release_mutex(id, addr);
+        if(locked_proc_id_mutex != -1)
+        {
+            bus->release_mutex(locked_proc_id_mutex, addr);
+        }
+
         wait();
     }
     else

@@ -21,6 +21,8 @@ class Bus : public Bus_if, public sc_module
 
         virtual bool read(int, int);
         virtual bool write(int, int, int);
+        virtual bool readx(int, int, int);
+        
         virtual int  check_ongoing_requests(int, int, BusRequest);
         virtual void release_mutex(int, int);
     

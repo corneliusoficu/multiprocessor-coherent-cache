@@ -36,8 +36,6 @@ bool Bus::read(int proc_index, int addr)
 
     log(name(), "read for address", addr, "proc index", proc_index);
 
-    memory->read(addr);
-    
     port_bus_addr.write(addr);
     port_bus_proc.write(proc_index);
     port_bus_valid.write(BusRequest::READ);
@@ -48,6 +46,8 @@ bool Bus::read(int proc_index, int addr)
     port_bus_addr.write("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
 
     bus_mutex.unlock();
+
+    memory->read(addr);
 
     return true;
 }   
@@ -69,8 +69,6 @@ bool Bus::write(int proc_index, int addr, int data)
 
     log(name(), "write for address", addr, "proc index", proc_index);
 
-    memory->write(addr, data);
-
     port_bus_addr.write(addr);
     port_bus_proc.write(proc_index);
     port_bus_valid.write(BusRequest::WRITE);
@@ -81,6 +79,42 @@ bool Bus::write(int proc_index, int addr, int data)
     port_bus_addr.write("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
     
     bus_mutex.unlock();
+
+    memory->write(addr, data);
+
+    return true;
+}
+
+bool Bus::readx(int proc_index, int addr, int data)
+{
+    while(requests[proc_index].access_mutex.trylock() == -1)
+    {
+        wait();
+    }
+
+    requests[proc_index].address = addr;
+    requests[proc_index].request_type = BusRequest::READX;
+
+    while(bus_mutex.trylock() == -1)
+    {
+        wait();
+    }
+
+    log(name(), "readx for address", addr, "proc index", proc_index);
+    
+    port_bus_addr.write(addr);
+    port_bus_proc.write(proc_index);
+    port_bus_valid.write(BusRequest::READX);
+
+    wait();
+
+    port_bus_valid.write(BusRequest::INVALID);
+    port_bus_addr.write("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+
+    bus_mutex.unlock();
+
+    memory->read(addr);
+    memory->write(addr, data);
 
     return true;
 }

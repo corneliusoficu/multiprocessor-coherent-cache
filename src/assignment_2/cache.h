@@ -38,12 +38,13 @@ private:
     int **cache;
     int **tags;
     int **least_recently_updated;
+    int **cache_status;
 
     int bit_mask_byte_in_line = create_mask(0,  4);
     int bit_mask_set_address  = create_mask(5, 11);
     int bit_mask_tag          = create_mask(12, 31);
 
-    void extract_address_components(u_int32_t, int*, int*, int*);
+    void extract_address_components(int, int*, int*, int*);
     void initialize_cache_arrays();
     int  create_mask(int, int);
     int  get_index_of_line_in_set(int, int);

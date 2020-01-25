@@ -1,5 +1,6 @@
 #include "cache.h"
 
+ofstream Log;
 
 Cache::Cache(sc_module_name name_, int id_) : sc_module(name_), id(id_)
 {
@@ -28,16 +29,19 @@ void Cache::initialize_cache_arrays()
     cache                   = new int*[CACHE_NUMBER_OF_SETS];
     tags                    = new int*[CACHE_NUMBER_OF_SETS]; 
     least_recently_updated  = new int*[CACHE_NUMBER_OF_SETS];
+    cache_status            = new int*[CACHE_NUMBER_OF_SETS];
 
     for(int i = 0; i < CACHE_NUMBER_OF_SETS; i++)
     {
         least_recently_updated[i] = new int[CACHE_NUMBER_OF_LINES_IN_SET];
         cache[i]                  = new int[CACHE_NUMBER_OF_LINES_IN_SET * CACHE_LINE_SIZE_BYTES];
         tags[i]                   = new int[CACHE_NUMBER_OF_LINES_IN_SET];
+        cache_status[i]           = new int[CACHE_NUMBER_OF_LINES_IN_SET];
 
         for(int j = 0; j < CACHE_NUMBER_OF_LINES_IN_SET; j++)
         {
-            tags[i][j] = -1;
+            tags[i][j]         = -1;
+            cache_status[i][j] =  1; 
         }
     }
 }
@@ -56,7 +60,7 @@ int Cache::get_index_of_line_in_set(int set_index, int tag)
 {
     for(int index = 0; index < CACHE_NUMBER_OF_LINES_IN_SET; index++)
     {
-        if(tags[set_index][index] == tag)
+        if(cache_status[set_index][index] == 1 && tags[set_index][index] == tag)
         {
             return index;
         }
@@ -77,14 +81,18 @@ void Cache::update_lru(int set_address, int line_in_set_index)
 }
 
 int Cache::get_lru_line(int set_address){ //returns index of the lru line
-    int max = 0;
+    int max       = 0;
     int max_index = 0;
 
     for(int i = 0; i < CACHE_NUMBER_OF_LINES_IN_SET; i++)
     {
+        if(cache_status[set_address][i] == 0)
+        {
+            return i;
+        }
         if(least_recently_updated[set_address][i] > max)
         {
-            max =  least_recently_updated[set_address][i];
+            max = least_recently_updated[set_address][i];
             max_index = i;
         }
 
@@ -92,7 +100,7 @@ int Cache::get_lru_line(int set_address){ //returns index of the lru line
     return max_index;
 }
 
-void Cache::extract_address_components(u_int32_t addr, int *byte_in_line, int *set_address, int *tag)
+void Cache::extract_address_components(int addr, int *byte_in_line, int *set_address, int *tag)
 {
     *byte_in_line = (addr & bit_mask_byte_in_line);     // Obtaining value for bits 0 - 4, no shifting required
     *set_address  = (addr & bit_mask_set_address) >> 5; // Shifting to right to obtain value for bits 5  - 11
@@ -115,7 +123,8 @@ int Cache::cpu_read(uint32_t addr)
         bus->read(id, addr);
         
         line_in_set_index = get_lru_line(set_address);
-        tags[set_address][line_in_set_index] = tag;
+        tags[set_address][line_in_set_index]         = tag;
+        cache_status[set_address][line_in_set_index] = 1;
         cache[set_address][line_in_set_index * CACHE_LINE_SIZE_BYTES + byte_in_line] = rand() % 1000 + 1;
         
         bus->release_mutex(id, addr);
@@ -153,6 +162,8 @@ int Cache::cpu_write(uint32_t addr, uint32_t data)
         bus->readx(id, addr, data);
 
         line_in_set_index = get_lru_line(set_address);
+        cache_status[set_address][line_in_set_index] = 1;
+        update_lru(set_address, line_in_set_index);
         tags[set_address][line_in_set_index] = tag;
 
         bus->release_mutex(id, addr);
@@ -171,6 +182,7 @@ int Cache::cpu_write(uint32_t addr, uint32_t data)
         locked_proc_id_mutex = bus->check_ongoing_requests(id, addr, BusRequest::WRITE);
         bus->write(id, addr, data);
         
+        cache_status[set_address][line_in_set_index] = 1;
         update_lru(set_address, line_in_set_index);
 
         bus->release_mutex(id, addr);
@@ -188,7 +200,18 @@ int Cache::cpu_write(uint32_t addr, uint32_t data)
 
 void Cache::invalidate_cache_copy(int addr)
 {
+    int byte_in_line, set_address, tag;
+    extract_address_components(addr, &byte_in_line, &set_address, &tag);
 
+    for(int line_index = 0; line_index < CACHE_NUMBER_OF_LINES_IN_SET; line_index++)
+    {
+        if(cache_status[set_address][line_index] == 1 && tags[set_address][line_index] == tag)
+        {
+            log(name(), "Cache", id, "invalidated address", addr);
+            cache_status[set_address][line_index] = 0;
+            break;
+        }
+    }
 }
 
 void Cache::snoop()

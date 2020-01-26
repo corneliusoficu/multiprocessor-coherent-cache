@@ -262,9 +262,8 @@ void Cache::invalidate_cache_copy(int addr)
     {
         if(cache_status[set_address][line_index] == 1 && tags[set_address][line_index] == tag)
         {
-            log(name(), "Cache", id, "invalidated address", addr);
             cache_status[set_address][line_index] = 0;
-            break;
+            Cache::invalidated_addresses_count++;
         }
     }
 }

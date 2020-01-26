@@ -16,6 +16,8 @@ class Cache : public cache_if, public sc_module
 {
 
 public:
+    static long invalidated_addresses_count;
+
     sc_in<bool>       port_clk;
     sc_port<Bus_if>   bus;
     sc_in_rv<32>      port_bus_addr;
@@ -23,7 +25,7 @@ public:
     sc_in<BusRequest> port_bus_valid;
 
     bool can_snoop;
-
+    
     Cache(sc_module_name, int);
     ~Cache();
 

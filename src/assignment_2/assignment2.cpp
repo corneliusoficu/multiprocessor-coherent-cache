@@ -10,6 +10,32 @@
 using namespace std;
 using namespace sc_core; // This pollutes namespace, better: only import what you need.
 
+long Cache::invalidated_addresses_count = 0;
+
+void print_cache_and_bus_stats(Bus *bus)
+{
+    double avg_access_waiting_time = (double)bus->waits / (double)(bus->reads + bus->writes + bus->readXs);
+
+    double total_exec_time = sc_time_stamp().value()/1000;
+
+    printf("\nNumber of Bus reads: %ld\n", bus->reads);
+    printf("Number of Bus readxs: %ld\n", bus->readXs);
+    printf("Number of Bus writes: %ld\n", bus->writes);
+    printf("Total bus accesses: %ld\n", bus->reads + bus->readXs + bus->writes);
+    printf("Number of waits for bus: %ld\n", bus->waits);
+    printf("Bus avg waiting time per access: %.2f\n", avg_access_waiting_time);
+    printf("Number of waits to maintain bus consistency: %ld\n", bus->consistency_waits);
+    printf("Nr of invalidated addresses while snooping the bus: %ld\n", Cache::invalidated_addresses_count);
+    printf("Total execution time: %.2f\n", total_exec_time);
+    printf("Average per memory access time: %.2f\n", total_exec_time / (double)(bus->reads + bus->readXs + bus->writes));
+
+
+
+    // cout << left << setw(10) << "Bus reads: " << setw(5) << bus->reads << endl;
+    // cout << left << setw(10) << "Bus readxs: " << setw(5) << bus->readXs << endl;
+    // cout << left << setw(10) << "Bus writes: " << setw(5) << bus->writes << endl; 
+}
+
 void delete_cpus_and_caches(CPU **cpus, Cache** caches, int nr_cpus)
 {
     for(int index = 0; index < nr_cpus; index++)
@@ -94,7 +120,8 @@ int sc_main(int argc, char* argv[])
         sc_start();
 
         stats_print();
-        cout << sc_time_stamp() <<endl;
+        print_cache_and_bus_stats(bus);
+        // cout << sc_time_stamp() <<endl;
 
         delete_cpus_and_caches(cpus, caches, nr_processors);
     }

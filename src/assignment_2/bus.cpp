@@ -11,6 +11,12 @@ Bus::Bus(sc_module_name name_, int id_, int num_cpus_) : sc_module(name_), id(id
         requests[cpu_index].request_type = BusRequest::INVALID;
     }
     port_bus_addr.write("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+
+    waits             = 0;
+    reads             = 0;
+    writes            = 0;
+    readXs            = 0;
+    consistency_waits = 0;
 }
 
 Bus::~Bus()
@@ -22,6 +28,7 @@ bool Bus::read(int proc_index, int addr)
 {
     while(requests[proc_index].access_mutex.trylock() == -1)
     {
+        consistency_waits++;
         wait();
     }
 
@@ -31,8 +38,11 @@ bool Bus::read(int proc_index, int addr)
 
     while(bus_mutex.trylock() == -1)
     {
+        waits++;
         wait();
     }
+
+    reads++;
 
     log(name(), "read for address", addr, "proc index", proc_index);
 
@@ -56,6 +66,7 @@ bool Bus::write(int proc_index, int addr, int data)
 {
     while(requests[proc_index].access_mutex.trylock() == -1)
     {
+        consistency_waits++;
         wait();
     }
 
@@ -65,7 +76,10 @@ bool Bus::write(int proc_index, int addr, int data)
     while(bus_mutex.trylock() == -1)
     {
         wait();
+        waits++;
     }
+
+    writes++;
 
     log(name(), "write for address", addr, "proc index", proc_index);
 
@@ -89,6 +103,7 @@ bool Bus::readx(int proc_index, int addr, int data)
 {
     while(requests[proc_index].access_mutex.trylock() == -1)
     {
+        consistency_waits++;
         wait();
     }
 
@@ -97,8 +112,11 @@ bool Bus::readx(int proc_index, int addr, int data)
 
     while(bus_mutex.trylock() == -1)
     {
+        waits++;
         wait();
     }
+
+    readXs++;
 
     log(name(), "readx for address", addr, "proc index", proc_index);
     
@@ -144,9 +162,9 @@ int Bus::check_ongoing_requests(int proc_index, int addr, BusRequest operation)
             if((pending_operation == READ && (operation == READX || operation == WRITE)) || 
                (pending_operation == READX && (operation == READX || operation == READ)))
             {
-                cout<< "Found already executing instruction for cpu " << p_index << " while cpu " << proc_index << " was modifying address: " << addr << endl; 
                 while(requests[p_index].access_mutex.trylock() == -1)
                 {
+                    consistency_waits++;
                     wait();
                 }
                 requests[p_index].address = addr;

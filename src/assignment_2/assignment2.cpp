@@ -19,15 +19,16 @@ void print_cache_and_bus_stats(Bus *bus)
     double total_exec_time = sc_time_stamp().value()/1000;
 
     printf("\nNumber of Bus reads: %ld\n", bus->reads);
-    printf("Number of Bus readxs: %ld\n", bus->readXs);
     printf("Number of Bus writes: %ld\n", bus->writes);
+    printf("Number of Bus readxs: %ld\n", bus->readXs);
     printf("Total bus accesses: %ld\n", bus->reads + bus->readXs + bus->writes);
     printf("Number of waits for bus: %ld\n", bus->waits);
     printf("Bus avg waiting time per access: %.2f\n", avg_access_waiting_time);
     printf("Number of waits to maintain bus consistency: %ld\n", bus->consistency_waits);
     printf("Nr of invalidated addresses while snooping the bus: %ld\n", Cache::invalidated_addresses_count);
-    printf("Total execution time: %.2f\n", total_exec_time);
     printf("Average per memory access time: %.2f\n", total_exec_time / (double)(bus->reads + bus->readXs + bus->writes));
+    printf("Total execution time: %.2f\n", total_exec_time);
+    
 
 
 
